@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Lambda/临时依赖
+lambda_requirements.txt
+index_lambda/requirements.txt
+query_lambda/requirements.txt
+tmp/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Others
+*.bak
+*.swp
+*.tmp
+*.orig
+
+# Docker
+*.pid
+
+# Test
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Chainlit
+chainlit.md 
+
+.env
+.aws-sam
+.chainlit

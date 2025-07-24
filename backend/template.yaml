@@ -1,0 +1,127 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Backend stack for the RAG application, including S3, Lambda, Bedrock, and OpenSearch.
+
+Parameters:
+  OpenSearchCollectionName:
+    Type: String
+    Description: Name for the OpenSearch Serverless collection.
+    Default: knowledge-base-collection
+
+Globals:
+  Function:
+    Timeout: 180
+    Runtime: python3.11
+    Architectures:
+      - x86_64
+
+Resources:
+  # --- S3 Bucket for Documents ---
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # --- OpenSearch Serverless Collection ---
+  OpenSearchCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    Properties:
+      Name: !Ref OpenSearchCollectionName
+      Type: VECTORSEARCH
+      Description: Vector store for the knowledge base.
+
+  # --- IAM Roles ---
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaBaseExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+        - PolicyName: S3ReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${DocumentsBucket.Arn}/*"
+        - PolicyName: BedrockInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource: "*" # For production, restrict to specific models
+        - PolicyName: OpenSearchAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: aoss:APIAccessAll
+                Resource: !GetAtt OpenSearchCollection.Arn
+
+  # --- Lambda Function for Indexing ---
+  IndexLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: index_lambda/
+      Handler: app.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: 512
+      Environment:
+        Variables:
+          OPENSEARCH_HOST: !GetAtt OpenSearchCollection.CollectionEndpoint
+          OPENSEARCH_INDEX: "knowledge-index"
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref DocumentsBucket
+            Events: s3:ObjectCreated:*
+
+  # --- Lambda Function for Queries ---
+  QueryLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: query_lambda/
+      Handler: app.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: 512
+      Environment:
+        Variables:
+          OPENSEARCH_HOST: !GetAtt OpenSearchCollection.CollectionEndpoint
+          OPENSEARCH_INDEX: "knowledge-index"
+      Events:
+        QueryApi:
+          Type: Api
+          Properties:
+            Path: /query
+            Method: post
+
+Outputs:
+  DocumentsBucketName:
+    Description: "Name of the S3 bucket for uploading documents."
+    Value: !Ref DocumentsBucket
+  QueryApiEndpoint:
+    Description: "API Gateway endpoint URL for the query function."
+    Value: !Sub "https://\${ServerlessRestApi}.execute-api.\${AWS::Region}.amazonaws.com/Prod/query"
