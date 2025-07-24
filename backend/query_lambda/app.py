@@ -17,7 +17,7 @@ bedrock = boto3.client('bedrock-runtime')
 # OpenSearch クライアントのセットアップ
 def get_opensearch_client():
     auth = AWSRequestsAuth(
-        aws_access_key=os.environ['AWS_ACCESS_KEY'],
+        aws_access_key=os.environ['AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
         aws_token=os.environ['AWS_SESSION_TOKEN'],
         aws_host=OPENSEARCH_HOST,
