@@ -15,7 +15,6 @@ env/
 .venv/
 
 # Lambda/临时依赖
-lambda_requirements.txt
 index_lambda/requirements.txt
 query_lambda/requirements.txt
 tmp/
