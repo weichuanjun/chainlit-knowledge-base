@@ -53,8 +53,8 @@ echo "\n--- バックエンドスタックのデプロイを開始します ---"
 # バックエンドのディレクトリに移動
 cd backend
 
-cp lambda_requirements.txt index_lambda/requirements.txt
-cp lambda_requirements.txt query_lambda/requirements.txt
+cp ../lambda_requirements.txt index_lambda/requirements.txt
+cp ../lambda_requirements.txt query_lambda/requirements.txt
 
 sam build --use-container
 sam deploy \
@@ -65,7 +65,7 @@ sam deploy \
     --no-confirm-changeset
 
 # バックエンドのAPI URLを取得
-API_URL=$(aws cloudformation describe-stacks --stack-name "${BACKEND_STACK_NAME}" --query "Stacks[0].Outputs[?OutputKey=='QueryApiEndpoint'].OutputValue" --output text)
+API_URL=$(aws cloudformation describe-stacks --stack-name "${BACKEND_STACK_NAME}" --region "${AWS_REGION}" --query "Stacks[0].Outputs[?OutputKey=='QueryApiEndpoint'].OutputValue" --output text)
 
 if [ -z "$API_URL" ]; then
     echo "エラー: バックエンドのAPI URLを取得できませんでした。"
@@ -98,6 +98,7 @@ cd ..
 echo "\n--- すべてのデプロイが完了しました！ ---"
 aws cloudformation describe-stacks \
     --stack-name "${FRONTEND_STACK_NAME}" \
+    --region "${AWS_REGION}" \
     --query "Stacks[0].Outputs" \
     --output table
 
